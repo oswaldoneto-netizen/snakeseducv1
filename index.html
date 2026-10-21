@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Cobrinha Arena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e6edf5;--ink:#1c2b3d;--panel:#ffffff;--accent:#2f5bff;--muted:#6b7b8f}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);font-family:'Fredoka',system-ui,sans-serif;color:var(--ink)}
+canvas{display:block;position:fixed;inset:0}
+#menu{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(230,237,245,.82);backdrop-filter:blur(6px);z-index:10}
+#menu.hide{display:none}
+.card{background:var(--panel);border-radius:22px;padding:34px 30px;width:min(380px,90vw);text-align:center;box-shadow:0 18px 50px rgba(28,43,61,.18)}
+h1{margin:0 0 4px;font-size:42px;font-weight:700;letter-spacing:-.5px}
+#sub{margin:0 0 22px;color:var(--muted);font-size:16px}
+input{width:100%;font:inherit;font-size:20px;text-align:center;padding:13px;border:2px solid #d3dce8;border-radius:14px;outline:none;color:var(--ink)}
+input:focus{border-color:var(--accent)}
+button{margin-top:14px;width:100%;font:inherit;font-weight:600;font-size:20px;padding:13px;border:0;border-radius:14px;background:var(--accent);color:#fff;cursor:pointer}
+button:focus-visible{outline:3px solid #9bb2ff;outline-offset:2px}
+button:active{transform:scale(.98)}
+#hint{margin-top:16px;font-size:14px;color:var(--muted);line-height:1.4}
+#lb{position:fixed;top:14px;right:14px;width:210px;background:rgba(255,255,255,.88);border-radius:16px;padding:12px 14px;z-index:5;font-size:15px;box-shadow:0 6px 20px rgba(28,43,61,.12)}
+#lb h2{margin:0 0 8px;font-size:16px;font-weight:700}
+#lb ol{margin:0;padding:0;list-style:none}
+#lb li{display:flex;justify-content:space-between;gap:8px;padding:2px 0}
+#lb li span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#lb li.me{color:var(--accent);font-weight:700}
+#hud{position:fixed;left:14px;bottom:14px;background:rgba(255,255,255,.88);border-radius:14px;padding:10px 16px;z-index:5;font-size:18px;font-weight:600;box-shadow:0 6px 20px rgba(28,43,61,.12)}
+#hud small{display:block;font-size:13px;font-weight:400;color:var(--muted)}
+@media (max-width:600px){#lb{width:160px;font-size:13px}}
+@media (prefers-reduced-motion:reduce){button:active{transform:none}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="lb" hidden><h2>Mais fortes</h2><ol id="lbl"></ol></div>
+<div id="hud" hidden>Tamanho: <span id="score">0</span><small id="pl"></small></div>
+<div id="menu">
+  <div class="card">
+    <h1>Cobrinha Arena</h1>
+    <p id="sub">Coma, cresça e domine o ranking.</p>
+    <input id="nick" maxlength="15" placeholder="Seu nick" autocomplete="off">
+    <button id="play">Jogar</button>
+    <p id="hint">Mouse para guiar, clique ou espaço para acelerar.<br>No celular, arraste o dedo (dois dedos aceleram).</p>
+  </div>
+</div>
+<script>
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const menu = document.getElementById('menu'), nickEl = document.getElementById('nick');
+const lbEl = document.getElementById('lb'), lbl = document.getElementById('lbl'), hud = document.getElementById('hud');
+let W = 0, H = 0, dpr = 1;
+function resize() { dpr = Math.min(window.devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+addEventListener('resize', resize); resize();
+try { nickEl.value = localStorage.getItem('nick') || ''; } catch (e) {}
+
+let ws, myId = null, world = { w: 4000, h: 4000 }, playing = false;
+let prev = null, cur = null, prevT = 0, curT = 0, camX = 2000, camY = 2000;
+let angle = 0, boost = false, lastSend = 0;
+const FOOD_COLORS = ['#ff5d73', '#ffb020', '#2ec4b6', '#7b61ff', '#ff7ab6', '#3ddc84', '#4cc9f0', '#f77f00'];
+
+function connect(cb) {
+  ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
+  ws.onopen = cb;
+  ws.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.t === 'init') { myId = m.id; world = { w: m.w, h: m.h }; playing = true; prev = cur = null; }
+    else if (m.t === 's') { prev = cur; prevT = curT; cur = m; curT = performance.now(); updateUI(m); }
+    else if (m.t === 'dead') {
+      playing = false; menu.classList.remove('hide');
+      document.getElementById('sub').textContent = 'Você fez ' + m.score + ' pontos. Jogue de novo!';
+      document.getElementById('play').textContent = 'Jogar de novo';
+    }
+  };
+  ws.onclose = () => { playing = false; menu.classList.remove('hide'); document.getElementById('sub').textContent = 'Conexão perdida. Clique em Jogar para reconectar.'; ws = null; };
+}
+function join() {
+  const nick = nickEl.value.trim();
+  try { localStorage.setItem('nick', nick); } catch (e) {}
+  const send = () => ws.send(JSON.stringify({ t: 'join', nick }));
+  menu.classList.add('hide'); lbEl.hidden = false; hud.hidden = false;
+  if (ws && ws.readyState === 1) send(); else connect(send);
+}
+document.getElementById('play').onclick = join;
+nickEl.addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
+
+function updateUI(m) {
+  document.getElementById('score').textContent = m.sc;
+  document.getElementById('pl').textContent = m.pl + ' jogadores na arena';
+  lbl.innerHTML = '';
+  m.lb.forEach(([n, s, id], i) => {
+    const li = document.createElement('li'); if (id === myId) li.className = 'me';
+    const a = document.createElement('span'); a.textContent = (i + 1) + '. ' + n;
+    const b = document.createElement('span'); b.textContent = s;
+    li.append(a, b); lbl.appendChild(li);
+  });
+}
+
+function sendInput(force) {
+  const now = performance.now();
+  if (!ws || ws.readyState !== 1 || !playing || (!force && now - lastSend < 40)) return;
+  lastSend = now; ws.send(JSON.stringify({ t: 'a', a: angle, b: boost }));
+}
+addEventListener('mousemove', e => { angle = Math.atan2(e.clientY - H / 2, e.clientX - W / 2); sendInput(); });
+addEventListener('mousedown', e => { if (e.target === cv) { boost = true; sendInput(true); } });
+addEventListener('mouseup', () => { boost = false; sendInput(true); });
+addEventListener('keydown', e => { if (e.code === 'Space' && document.activeElement !== nickEl) { boost = true; sendInput(true); e.preventDefault(); } });
+addEventListener('keyup', e => { if (e.code === 'Space') { boost = false; sendInput(true); } });
+function touch(e) { const t = e.touches[0]; if (!t) { boost = false; return; } angle = Math.atan2(t.clientY - H / 2, t.clientX - W / 2); boost = e.touches.length > 1; sendInput(true); }
+cv.addEventListener('touchstart', touch, { passive: true });
+cv.addEventListener('touchmove', touch, { passive: true });
+cv.addEventListener('touchend', touch, { passive: true });
+setInterval(() => sendInput(true), 100);
+
+function hsl(h, l) { return 'hsl(' + h + ',80%,' + l + '%)'; }
+function segsOf(sn, alpha) {
+  const p = prev && prev.sn.find(o => o.id === sn.id);
+  if (!p || p.s.length !== sn.s.length) return sn.s;
+  const out = new Array(sn.s.length);
+  for (let i = 0; i < out.length; i++) out[i] = p.s[i] + (sn.s[i] - p.s[i]) * alpha;
+  return out;
+}
+function draw() {
+  requestAnimationFrame(draw);
+  ctx.fillStyle = '#e6edf5'; ctx.fillRect(0, 0, W, H);
+  if (!cur) return;
+  const now = performance.now();
+  const alpha = prev ? Math.max(0, Math.min(1, (now - curT) / Math.max(1, curT - prevT))) : 1;
+  const me = cur.sn.find(s => s.id === myId);
+  if (me) { const sg = segsOf(me, alpha); camX += (sg[0] - camX) * 0.25; camY += (sg[1] - camY) * 0.25; }
+  const zoom = Math.max(0.55, Math.min(1, 1 - (me ? me.s.length / 2 : 10) / 900 + 0.1));
+  ctx.save();
+  ctx.translate(W / 2, H / 2); ctx.scale(zoom, zoom); ctx.translate(-camX, -camY);
+  const vw = W / zoom / 2 + 60, vh = H / zoom / 2 + 60;
+  // grade
+  ctx.strokeStyle = '#d3dce8'; ctx.lineWidth = 2; ctx.beginPath();
+  const gs = 80, x0 = Math.floor((camX - vw) / gs) * gs, y0 = Math.floor((camY - vh) / gs) * gs;
+  for (let x = x0; x < camX + vw; x += gs) { ctx.moveTo(x, camY - vh); ctx.lineTo(x, camY + vh); }
+  for (let y = y0; y < camY + vh; y += gs) { ctx.moveTo(camX - vw, y); ctx.lineTo(camX + vw, y); }
+  ctx.stroke();
+  // fora do mapa
+  ctx.fillStyle = 'rgba(28,43,61,.18)';
+  const L = camX - vw - 50, R = camX + vw + 50, T = camY - vh - 50, B = camY + vh + 50;
+  if (L < 0) ctx.fillRect(L, T, -L, B - T);
+  if (R > world.w) ctx.fillRect(world.w, T, R - world.w, B - T);
+  if (T < 0) ctx.fillRect(L, T, R - L, -T);
+  if (B > world.h) ctx.fillRect(L, world.h, R - L, B - world.h);
+  ctx.strokeStyle = '#1c2b3d'; ctx.lineWidth = 6; ctx.strokeRect(0, 0, world.w, world.h);
+  // comida
+  for (const f of cur.f) {
+    ctx.fillStyle = FOOD_COLORS[f[3]]; ctx.beginPath(); ctx.arc(f[0], f[1], f[2] > 1 ? 9 : 6, 0, 6.283); ctx.fill();
+  }
+  // cobras (as menores primeiro, a minha por cima)
+  const list = cur.sn.slice().sort((a, b) => (a.id === myId) - (b.id === myId));
+  for (const sn of list) {
+    const sg = segsOf(sn, alpha), n = sg.length / 2, r = 9 + Math.min(8, n / 14);
+    for (let i = n - 1; i >= 0; i--) {
+      ctx.fillStyle = hsl(sn.h, 45 + (i % 6 < 3 ? 6 : 0));
+      ctx.beginPath(); ctx.arc(sg[i * 2], sg[i * 2 + 1], r, 0, 6.283); ctx.fill();
+    }
+    const hx = sg[0], hy = sg[1], ha = Math.atan2(hy - sg[3], hx - sg[2]);
+    for (const s of [-1, 1]) {
+      const ex = hx + Math.cos(ha + s * 0.6) * r * 0.6, ey = hy + Math.sin(ha + s * 0.6) * r * 0.6;
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, ey, r * 0.38, 0, 6.283); ctx.fill();
+      ctx.fillStyle = '#1c2b3d'; ctx.beginPath(); ctx.arc(ex + Math.cos(ha) * 2, ey + Math.sin(ha) * 2, r * 0.18, 0, 6.283); ctx.fill();
+    }
+    ctx.font = '600 15px Fredoka, sans-serif'; ctx.textAlign = 'center';
+    ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.strokeText(sn.n, hx, hy - r - 10);
+    ctx.fillStyle = '#1c2b3d'; ctx.fillText(sn.n, hx, hy - r - 10);
+  }
+  ctx.restore();
+}
+draw();
+</script>
+</body>
+</html>
