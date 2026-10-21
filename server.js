@@ -1,9 +1,17 @@
 const express = require('express');
 const http = require('http');
+const path = require('path');
+const fs = require('fs');
 const { WebSocketServer } = require('ws');
 
 const app = express();
-app.use(express.static('public'));
+// procura o index.html em public/ ou ao lado do server.js
+const pubDir = fs.existsSync(path.join(__dirname, 'public', 'index.html'))
+  ? path.join(__dirname, 'public')
+  : __dirname;
+console.log('Servindo arquivos de: ' + pubDir, '| index.html existe:', fs.existsSync(path.join(pubDir, 'index.html')));
+app.use(express.static(pubDir));
+app.get('/', (req, res) => res.sendFile(path.join(pubDir, 'index.html')));
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
