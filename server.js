@@ -15,8 +15,8 @@ app.get('/', (req, res) => res.sendFile(path.join(pubDir, 'index.html')));
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
-const W = 4000, H = 4000, TICK = 33, SEG = 10, SPEED = 3, BOOST = 5.2, TURN = 0.11;
-const FOOD_N = 600, BOTS = 8, VIEW = 1100, HEAD_R = 9;
+const W = 4000, H = 4000, TICK = 33, SEG = 10, SPEED = 3, BOOST = 5.2, TURN = 0.14;
+const FOOD_N = 600, BOTS = 0, VIEW = 1100, HEAD_R = 9;
 const rnd = (a, b) => a + Math.random() * (b - a);
 const BOT_NAMES = ['Naja', 'Jiboia', 'Sucuri', 'Cascavel', 'Mamba', 'Coral', 'Viper', 'Anaconda', 'Python', 'Boto'];
 
@@ -81,7 +81,7 @@ function step(s) {
   d = Math.atan2(Math.sin(d), Math.cos(d));
   s.a += Math.max(-TURN, Math.min(TURN, d));
   const boosting = s.boost && s.score > 5;
-  if (boosting && ++s.drain >= 8) {
+  if (boosting && ++s.drain >= 3) {
     s.drain = 0; s.score--;
     const t = s.seg[s.seg.length - 1];
     addFood(t.x, t.y, 1);
