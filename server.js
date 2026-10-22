@@ -15,7 +15,7 @@ app.get('/', (req, res) => res.sendFile(path.join(pubDir, 'index.html')));
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, perMessageDeflate: false });
 
-const W = 4000, H = 4000, TICK = 33, SEG = 10, SPEED = 3, BOOST = 5.2, TURN = 0.2;
+const W = 4000, H = 4000, TICK = 33, SEG = 10, SPEED = 0.09, BOOST = 0.158, TURN = 0.00606;
 const FOOD_N = 600, BOTS = 0, VIEW = 1100, HEAD_R = 9;
 const rnd = (a, b) => a + Math.random() * (b - a);
 const BOT_NAMES = ['Naja', 'Jiboia', 'Sucuri', 'Cascavel', 'Mamba', 'Coral', 'Viper', 'Anaconda', 'Python', 'Boto'];
@@ -75,18 +75,22 @@ function think(s) {
   }
 }
 
-function step(s) {
+function step(s, dt) {
   if (s.bot) { think(s); s.boost = false; }
   let d = s.ta - s.a;
   d = Math.atan2(Math.sin(d), Math.cos(d));
-  s.a += Math.max(-TURN, Math.min(TURN, d));
-  const boosting = s.boost && s.score > 5;
-  if (boosting && ++s.drain >= 3) {
-    s.drain = 0; s.score--;
-    const t = s.seg[s.seg.length - 1];
-    addFood(t.x, t.y, 1);
-  }
-  const sp = boosting ? BOOST : SPEED;
+  const tm = TURN * dt;
+  s.a += Math.max(-tm, Math.min(tm, d));
+  const boosting = s.boost && s.score >= 1;
+  if (boosting) {
+    s.drain += dt;
+    while (s.drain >= 100 && s.score >= 1) {
+      s.drain -= 100; s.score--;
+      const t = s.seg[s.seg.length - 1];
+      addFood(t.x, t.y, 1);
+    }
+  } else s.drain = 0;
+  const sp = (boosting ? BOOST : SPEED) * dt;
   const h = s.seg[0];
   h.x += Math.cos(s.a) * sp;
   h.y += Math.sin(s.a) * sp;
@@ -100,8 +104,8 @@ function step(s) {
   while (s.seg.length > target && s.seg.length > 10) s.seg.pop();
 }
 
-function tick() {
-  for (const s of snakes.values()) step(s);
+function tick(dt) {
+  for (const s of snakes.values()) step(s, dt);
   const dead = [];
   for (const s of snakes.values()) {
     const h = s.seg[0];
@@ -144,7 +148,8 @@ function tick() {
     s.ws.send(JSON.stringify({ t: 's', me: s.id, sc: s.score, sn, f, lb, pl: snakes.size }));
   }
 }
-setInterval(tick, TICK);
+let lastTick = Date.now();
+setInterval(() => { const n = Date.now(), dt = Math.min(100, n - lastTick); lastTick = n; tick(dt); }, TICK);
 
 wss.on('connection', (ws) => {
   let me = null;
