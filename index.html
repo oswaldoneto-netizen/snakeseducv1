@@ -25,7 +25,7 @@ h1{margin:0;font-size:38px;font-weight:700;letter-spacing:-.5px}
 input{width:100%;margin-top:16px;font:inherit;font-size:20px;text-align:center;padding:12px;border:2px solid var(--line);border-radius:14px;outline:none;color:var(--ink);background:#0b0e13}
 input:focus{border-color:var(--accent)}
 .skh{text-align:left;margin:16px 0 6px;font-size:14px;color:var(--muted);font-weight:600}
-#skins{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+#skins{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 #skins .sk{margin:0;width:auto;padding:8px 4px 6px;font-size:14px;font-weight:600;background:#0b0e13;border:2px solid var(--line);border-radius:12px;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:2px}
 #skins .sk canvas{width:100%;height:auto;max-width:96px}
 #skins .sk small{font-size:12px;font-weight:400;color:var(--muted)}
@@ -48,7 +48,7 @@ button:focus-visible{outline:3px solid #9bb2ff;outline-offset:2px}
 #hud .bar{margin-top:6px;height:6px}
 #toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:10px 20px;border-radius:14px;font-weight:600;z-index:20;opacity:0;transition:opacity .3s;pointer-events:none;text-align:center}
 #toast.on{opacity:1}
-@media (max-width:600px){#lb{width:150px;font-size:13px}#skins{grid-template-columns:repeat(3,1fr)}h1{font-size:32px}}
+@media (max-width:600px){#lb{width:150px;font-size:13px}h1{font-size:32px}}
 @media (prefers-reduced-motion:reduce){#play:active{transform:none}#toast{transition:none}}
 </style>
 </head>
@@ -81,14 +81,15 @@ addEventListener('resize', resize); resize();
 
 /* ---------- skins ---------- */
 const SKINS = [
-  { n: 'Clássica', lvl: 1,  col: (i, t, h) => 'hsl(' + h + ',80%,' + (45 + (i % 6 < 3 ? 6 : 0)) + '%)' },
-  { n: 'Pietro',   lvl: 5,  col: (i) => 'hsl(' + (200 + Math.sin(i * .4) * 25) + ',90%,' + (58 + (i % 6 < 3 ? 6 : 0)) + '%)' },
-  { n: 'Jadrian',  lvl: 10, col: (i) => i % 6 < 3 ? '#39ff6a' : '#0f7a3a' },
-  { n: 'Kenedy',   lvl: 20, col: (i) => 'hsl(' + (10 + 35 * (.5 + .5 * Math.sin(i * .25))) + ',100%,' + (52 + (i % 4 < 2 ? 6 : 0)) + '%)' },
-  { n: 'Leo',      lvl: 30, col: (i) => i % 7 === 0 ? '#7a4a12' : (i % 2 ? '#f2b632' : '#ffc94d') },
-  { n: 'VT',       lvl: 40, col: (i) => i % 5 === 0 ? '#5cf2ff' : (i % 2 ? '#ff5ec9' : '#7a5cff') },
-  { n: 'RL',       lvl: 50, col: (i) => i % 8 < 4 ? '#ff2d3d' : '#ffffff' },
-  { n: 'Oswaldo',  lvl: 60, col: (i, t) => 'hsl(' + ((t / 8 + i * 14) % 360) + ',95%,60%)' }
+  { n: 'Clássico',  lvl: 1,  col: (i, t, h) => 'hsl(' + h + ',80%,' + (45 + (i % 6 < 3 ? 6 : 0)) + '%)' },
+  { n: 'TADALA',    lvl: 5,  col: (i) => 'hsl(' + (200 + Math.sin(i * .4) * 25) + ',90%,' + (58 + (i % 6 < 3 ? 6 : 0)) + '%)' },
+  { n: 'G7',        lvl: 10, col: (i) => i % 6 < 3 ? '#dfe6ee' : '#6f7b8a' },
+  { n: 'Felipinho', lvl: 20, col: (i) => i % 7 === 0 ? '#7a4a12' : (i % 2 ? '#f2b632' : '#ffc94d') },
+  { n: 'Murilinho', lvl: 30, col: (i) => i % 5 === 0 ? '#5cf2ff' : (i % 2 ? '#ff5ec9' : '#7a5cff') },
+  { n: 'Kenedy',    lvl: 40, col: (i) => 'hsl(' + (10 + 35 * (.5 + .5 * Math.sin(i * .25))) + ',100%,' + (52 + (i % 4 < 2 ? 6 : 0)) + '%)' },
+  { n: 'João',      lvl: 50, col: (i) => i % 8 < 4 ? '#ff2d3d' : '#ffffff' },
+  { n: 'Jadrian',   lvl: 60, col: (i) => i % 6 < 3 ? '#39ff6a' : '#0f7a3a' },
+  { n: 'Oswaldo',   lvl: 70, col: (i, t) => 'hsl(' + ((t / 8 + i * 14) % 360) + ',95%,60%)' }
 ];
 const ld = (k, d) => { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } };
 const sv = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };

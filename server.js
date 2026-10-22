@@ -155,7 +155,7 @@ wss.on('connection', (ws) => {
     if (m.t === 'join' && (!me || !snakes.has(me.id))) {
       const nick = String(m.nick || '').replace(/[^\p{L}\p{N} _.-]/gu, '').trim().slice(0, 15) || 'Anônimo';
       me = spawn(nick, ws, false);
-      me.k = Number.isInteger(m.k) && m.k >= 0 && m.k < 8 ? m.k : 0;
+      me.k = Number.isInteger(m.k) && m.k >= 0 && m.k < 9 ? m.k : 0;
       ws.send(JSON.stringify({ t: 'init', id: me.id, w: W, h: H }));
     } else if (m.t === 'a' && me && snakes.has(me.id) && Number.isFinite(m.a)) {
       me.ta = m.a; me.boost = !!m.b;
