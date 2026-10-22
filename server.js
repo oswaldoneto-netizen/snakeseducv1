@@ -13,9 +13,9 @@ console.log('Servindo arquivos de: ' + pubDir, '| index.html existe:', fs.exists
 app.use(express.static(pubDir));
 app.get('/', (req, res) => res.sendFile(path.join(pubDir, 'index.html')));
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server, perMessageDeflate: false });
 
-const W = 4000, H = 4000, TICK = 33, SEG = 10, SPEED = 3, BOOST = 5.2, TURN = 0.14;
+const W = 4000, H = 4000, TICK = 33, SEG = 10, SPEED = 3, BOOST = 5.2, TURN = 0.2;
 const FOOD_N = 600, BOTS = 0, VIEW = 1100, HEAD_R = 9;
 const rnd = (a, b) => a + Math.random() * (b - a);
 const BOT_NAMES = ['Naja', 'Jiboia', 'Sucuri', 'Cascavel', 'Mamba', 'Coral', 'Viper', 'Anaconda', 'Python', 'Boto'];
@@ -32,7 +32,7 @@ for (let i = 0; i < FOOD_N; i++) addFood();
 function spawn(nick, ws, bot) {
   const x = rnd(400, W - 400), y = rnd(400, H - 400), a = rnd(0, Math.PI * 2);
   const s = { id: nextId++, nick, ws, bot: !!bot, a, ta: a, boost: false, score: 0, drain: 0,
-    hue: Math.floor(rnd(0, 360)), seg: [], turnT: 0 };
+    k: 0, hue: Math.floor(rnd(0, 360)), seg: [], turnT: 0 };
   for (let i = 0; i < 10; i++) s.seg.push({ x: x - Math.cos(a) * i * SEG, y: y - Math.sin(a) * i * SEG });
   snakes.set(s.id, s);
   return s;
@@ -137,7 +137,7 @@ function tick() {
       if (Math.abs(oh.x - h.x) > VIEW + o.seg.length * SEG || Math.abs(oh.y - h.y) > VIEW + o.seg.length * SEG) continue;
       const pts = [];
       for (const p of o.seg) pts.push(Math.round(p.x), Math.round(p.y));
-      sn.push({ id: o.id, n: o.nick, h: o.hue, sc: o.score, s: pts });
+      sn.push({ id: o.id, n: o.nick, h: o.hue, k: o.k, sc: o.score, s: pts });
     }
     const f = [];
     for (const p of food) if (Math.abs(p.x - h.x) < VIEW && Math.abs(p.y - h.y) < VIEW) f.push([Math.round(p.x), Math.round(p.y), p.v, p.c]);
@@ -148,17 +148,17 @@ setInterval(tick, TICK);
 
 wss.on('connection', (ws) => {
   let me = null;
+  if (ws._socket) ws._socket.setNoDelay(true);
   ws.on('message', (raw) => {
     let m; try { m = JSON.parse(raw); } catch { return; }
-    if (m.t === 'join' && !me) {
+    if (m.t === 'p') { ws.send(JSON.stringify({ t: 'p', ts: m.ts })); return; }
+    if (m.t === 'join' && (!me || !snakes.has(me.id))) {
       const nick = String(m.nick || '').replace(/[^\p{L}\p{N} _.-]/gu, '').trim().slice(0, 15) || 'Anônimo';
       me = spawn(nick, ws, false);
+      me.k = Number.isInteger(m.k) && m.k >= 0 && m.k < 8 ? m.k : 0;
       ws.send(JSON.stringify({ t: 'init', id: me.id, w: W, h: H }));
     } else if (m.t === 'a' && me && snakes.has(me.id) && Number.isFinite(m.a)) {
       me.ta = m.a; me.boost = !!m.b;
-    } else if (m.t === 'join' && me && !snakes.has(me.id)) {
-      const nick = me.nick; me = spawn(nick, ws, false);
-      ws.send(JSON.stringify({ t: 'init', id: me.id, w: W, h: H }));
     }
   });
   ws.on('close', () => { if (me && snakes.has(me.id)) { me.ws = null; kill(me); } });

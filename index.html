@@ -7,58 +7,140 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#000;--ink:#f2f5fa;--panel:#12161d;--accent:#4d7cff;--muted:#8b97a8}
+:root{--bg:#000;--ink:#f2f5fa;--panel:#12161d;--accent:#4d7cff;--muted:#8b97a8;--line:#2a3342}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);font-family:'Fredoka',system-ui,sans-serif;color:var(--ink)}
-canvas{display:block;position:fixed;inset:0}
+canvas#c{display:block;position:fixed;inset:0}
 #menu{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.78);backdrop-filter:blur(6px);z-index:10}
 #menu.hide{display:none}
-.card{background:var(--panel);border-radius:22px;padding:34px 30px;width:min(380px,90vw);text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.6)}
-h1{margin:0 0 4px;font-size:42px;font-weight:700;letter-spacing:-.5px}
-#sub{margin:0 0 22px;color:var(--muted);font-size:16px}
-input{width:100%;font:inherit;font-size:20px;text-align:center;padding:13px;border:2px solid #2a3342;border-radius:14px;outline:none;color:var(--ink);background:#0b0e13}
+.card{background:var(--panel);border-radius:22px;padding:26px 24px;width:min(480px,94vw);max-height:96vh;overflow:auto;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.6)}
+.top{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+h1{margin:0;font-size:38px;font-weight:700;letter-spacing:-.5px}
+.pill{background:var(--accent);color:#fff;font-size:13px;font-weight:600;padding:3px 10px;border-radius:999px}
+#sub{margin:6px 0 14px;color:var(--muted);font-size:15px}
+.lvrow{display:flex;justify-content:space-between;font-size:15px;margin-bottom:5px}
+.lvrow span{color:var(--muted)}
+.bar{height:8px;background:#222a36;border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:99px}
+input{width:100%;margin-top:16px;font:inherit;font-size:20px;text-align:center;padding:12px;border:2px solid var(--line);border-radius:14px;outline:none;color:var(--ink);background:#0b0e13}
 input:focus{border-color:var(--accent)}
-button{margin-top:14px;width:100%;font:inherit;font-weight:600;font-size:20px;padding:13px;border:0;border-radius:14px;background:var(--accent);color:#fff;cursor:pointer}
+.skh{text-align:left;margin:16px 0 6px;font-size:14px;color:var(--muted);font-weight:600}
+#skins{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+#skins .sk{margin:0;width:auto;padding:8px 4px 6px;font-size:14px;font-weight:600;background:#0b0e13;border:2px solid var(--line);border-radius:12px;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:2px}
+#skins .sk canvas{width:100%;height:auto;max-width:96px}
+#skins .sk small{font-size:12px;font-weight:400;color:var(--muted)}
+#skins .sk.sel{border-color:var(--accent);background:#141c2e}
+#skins .sk.sel small{color:var(--accent)}
+#skins .sk.lock{opacity:.45;cursor:not-allowed}
+#play{margin-top:16px;width:100%;font:inherit;font-weight:600;font-size:20px;padding:13px;border:0;border-radius:14px;background:var(--accent);color:#fff;cursor:pointer}
 button:focus-visible{outline:3px solid #9bb2ff;outline-offset:2px}
-button:active{transform:scale(.98)}
-#hint{margin-top:16px;font-size:14px;color:var(--muted);line-height:1.4}
+#play:active{transform:scale(.98)}
+#hint{margin:14px 0 0;font-size:13px;color:var(--muted);line-height:1.45}
+.by{margin:10px 0 0;font-size:14px;font-weight:600}
 #lb{position:fixed;top:14px;right:14px;width:210px;background:rgba(18,22,29,.85);border-radius:16px;padding:12px 14px;z-index:5;font-size:15px;box-shadow:0 6px 20px rgba(0,0,0,.5)}
 #lb h2{margin:0 0 8px;font-size:16px;font-weight:700}
 #lb ol{margin:0;padding:0;list-style:none}
 #lb li{display:flex;justify-content:space-between;gap:8px;padding:2px 0}
 #lb li span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #lb li.me{color:var(--accent);font-weight:700}
-#hud{position:fixed;left:14px;bottom:14px;background:rgba(18,22,29,.85);border-radius:14px;padding:10px 16px;z-index:5;font-size:18px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.5)}
-#hud small{display:block;font-size:13px;font-weight:400;color:var(--muted)}
-@media (max-width:600px){#lb{width:160px;font-size:13px}}
-@media (prefers-reduced-motion:reduce){button:active{transform:none}}
+#hud{position:fixed;left:14px;bottom:14px;width:190px;background:rgba(18,22,29,.85);border-radius:14px;padding:10px 14px;z-index:5;font-size:17px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+#hud small{display:block;font-size:12px;font-weight:400;color:var(--muted);margin-top:4px}
+#hud .bar{margin-top:6px;height:6px}
+#toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:10px 20px;border-radius:14px;font-weight:600;z-index:20;opacity:0;transition:opacity .3s;pointer-events:none;text-align:center}
+#toast.on{opacity:1}
+@media (max-width:600px){#lb{width:150px;font-size:13px}#skins{grid-template-columns:repeat(3,1fr)}h1{font-size:32px}}
+@media (prefers-reduced-motion:reduce){#play:active{transform:none}#toast{transition:none}}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="lb" hidden><h2>Mais fortes</h2><ol id="lbl"></ol></div>
-<div id="hud" hidden>Tamanho: <span id="score">0</span><small id="pl"></small></div>
+<div id="hud" hidden>Tamanho: <span id="score">0</span><small id="hl"></small><div class="bar"><i id="hb"></i></div><small id="pl"></small></div>
+<div id="toast"></div>
 <div id="menu">
   <div class="card">
-    <h1>Cobrinha Arena</h1>
+    <div class="top"><h1>Cobrinha Arena</h1><span class="pill">Atualização 1</span></div>
     <p id="sub">Coma, cresça e domine o ranking.</p>
+    <div class="lvrow"><b id="lvn">Nível 1</b><span id="lvx"></span></div>
+    <div class="bar"><i id="lvb"></i></div>
     <input id="nick" maxlength="15" placeholder="Seu nick" autocomplete="off">
+    <div class="skh">Skins (suba de nível pra liberar)</div>
+    <div id="skins"></div>
     <button id="play">Jogar</button>
-    <p id="hint">WASD (ou setas) para guiar, espaço para acelerar.<br>Acelerar gasta pontos.<br>No celular, arraste o dedo (dois dedos aceleram).</p>
+    <p id="hint">WASD (ou setas) para guiar, espaço para acelerar.<br>Acelerar gasta pontos. No celular, arraste o dedo (dois dedos aceleram).</p>
+    <p class="by">Criador: Oswaldo</p>
   </div>
 </div>
 <script>
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
-const menu = document.getElementById('menu'), nickEl = document.getElementById('nick');
-const lbEl = document.getElementById('lb'), lbl = document.getElementById('lbl'), hud = document.getElementById('hud');
+const $ = id => document.getElementById(id);
+const menu = $('menu'), nickEl = $('nick'), lbEl = $('lb'), lbl = $('lbl'), hud = $('hud');
 let W = 0, H = 0, dpr = 1;
-function resize() { dpr = Math.min(window.devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+function resize() { dpr = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
 addEventListener('resize', resize); resize();
-try { nickEl.value = localStorage.getItem('nick') || ''; } catch (e) {}
 
+/* ---------- skins ---------- */
+const SKINS = [
+  { n: 'Clássica', lvl: 1,  col: (i, t, h) => 'hsl(' + h + ',80%,' + (45 + (i % 6 < 3 ? 6 : 0)) + '%)' },
+  { n: 'Pietro',   lvl: 5,  col: (i) => 'hsl(' + (200 + Math.sin(i * .4) * 25) + ',90%,' + (58 + (i % 6 < 3 ? 6 : 0)) + '%)' },
+  { n: 'Jadrian',  lvl: 10, col: (i) => i % 6 < 3 ? '#39ff6a' : '#0f7a3a' },
+  { n: 'Kenedy',   lvl: 20, col: (i) => 'hsl(' + (10 + 35 * (.5 + .5 * Math.sin(i * .25))) + ',100%,' + (52 + (i % 4 < 2 ? 6 : 0)) + '%)' },
+  { n: 'Leo',      lvl: 30, col: (i) => i % 7 === 0 ? '#7a4a12' : (i % 2 ? '#f2b632' : '#ffc94d') },
+  { n: 'VT',       lvl: 40, col: (i) => i % 5 === 0 ? '#5cf2ff' : (i % 2 ? '#ff5ec9' : '#7a5cff') },
+  { n: 'RL',       lvl: 50, col: (i) => i % 8 < 4 ? '#ff2d3d' : '#ffffff' },
+  { n: 'Oswaldo',  lvl: 60, col: (i, t) => 'hsl(' + ((t / 8 + i * 14) % 360) + ',95%,60%)' }
+];
+const ld = (k, d) => { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } };
+const sv = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+nickEl.value = ld('nick', '');
+let xp = +ld('xp', 0) || 0, skin = +ld('skin', 0) || 0;
+const lvOf = x => Math.floor(Math.sqrt(x / 50)) + 1;
+const xpAt = l => 50 * (l - 1) * (l - 1);
+let level = lvOf(xp), shownLvl = level;
+if (!SKINS[skin] || level < SKINS[skin].lvl) skin = 0;
+
+function lvInfo() {
+  const a = xpAt(level), b = xpAt(level + 1);
+  return { txt: (xp - a) + ' / ' + (b - a) + ' XP', pct: Math.min(100, (xp - a) / (b - a) * 100) };
+}
+function paintSkin(c, i) {
+  const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
+  for (let j = 8; j >= 0; j--) { g.fillStyle = SKINS[i].col(j, performance.now(), 200); g.beginPath(); g.arc(84 - j * 9, 14, 8, 0, 6.283); g.fill(); }
+  g.fillStyle = '#fff'; g.beginPath(); g.arc(87, 11, 2.6, 0, 6.283); g.arc(87, 18, 2.6, 0, 6.283); g.fill();
+  g.fillStyle = '#111'; g.beginPath(); g.arc(88, 11, 1.2, 0, 6.283); g.arc(88, 18, 1.2, 0, 6.283); g.fill();
+}
+function renderMenu() {
+  const li = lvInfo();
+  $('lvn').textContent = 'Nível ' + level; $('lvx').textContent = li.txt; $('lvb').style.width = li.pct + '%';
+  const box = $('skins'); box.innerHTML = '';
+  SKINS.forEach((s, i) => {
+    const ok = level >= s.lvl;
+    const d = document.createElement('button'); d.type = 'button';
+    d.className = 'sk' + (i === skin ? ' sel' : '') + (ok ? '' : ' lock');
+    const c = document.createElement('canvas'); c.width = 96; c.height = 28; paintSkin(c, i);
+    const n = document.createElement('span'); n.textContent = s.n;
+    const l = document.createElement('small'); l.textContent = ok ? (i === skin ? 'Equipada' : 'Liberada') : 'Nível ' + s.lvl;
+    d.append(c, n, l);
+    d.onclick = () => { if (!ok) return; skin = i; sv('skin', i); renderMenu(); };
+    box.appendChild(d);
+  });
+}
+renderMenu();
+let toastT; function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 3500); }
+function checkLevel() {
+  level = lvOf(xp);
+  if (level > shownLvl) {
+    const un = SKINS.filter(s => s.lvl > shownLvl && s.lvl <= level).map(s => s.n);
+    toast('Nível ' + level + '!' + (un.length ? ' Skin liberada: ' + un.join(', ') : ''));
+    shownLvl = level;
+  }
+}
+
+/* ---------- rede ---------- */
 let ws, myId = null, world = { w: 4000, h: 4000 }, playing = false;
-let prev = null, cur = null, prevT = 0, curT = 0, camX = 2000, camY = 2000;
-let angle = null, boost = false, lastSend = 0;
+let prev = null, cur = null, curT = 0, camX = 2000, camY = 2000;
+let angle = null, boost = false, lastSend = 0, runBase = 0, peak = 0, lastUI = 0, ping = 0;
+const TICKMS = 33;
 const FOOD_COLORS = ['#ff5d73', '#ffb020', '#2ec4b6', '#7b61ff', '#ff7ab6', '#3ddc84', '#4cc9f0', '#f77f00'];
 
 function connect(cb) {
@@ -66,29 +148,34 @@ function connect(cb) {
   ws.onopen = cb;
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
-    if (m.t === 'init') { myId = m.id; world = { w: m.w, h: m.h }; playing = true; prev = cur = null; angle = null; boost = false; }
-    else if (m.t === 's') { prev = cur; prevT = curT; cur = m; curT = performance.now(); updateUI(m); }
-    else if (m.t === 'dead') {
+    if (m.t === 'p') { ping = Math.round(performance.now() - m.ts); }
+    else if (m.t === 'init') { myId = m.id; world = { w: m.w, h: m.h }; playing = true; prev = cur = null; angle = null; boost = false; runBase = xp; peak = 0; }
+    else if (m.t === 's') {
+      prev = cur; cur = m; curT = performance.now();
+      if (m.sc > peak) { peak = m.sc; xp = runBase + peak; sv('xp', xp); checkLevel(); }
+      if (curT - lastUI > 250) { lastUI = curT; updateUI(m); }
+    } else if (m.t === 'dead') {
       playing = false; menu.classList.remove('hide');
-      document.getElementById('sub').textContent = 'Você fez ' + m.score + ' pontos. Jogue de novo!';
-      document.getElementById('play').textContent = 'Jogar de novo';
+      $('sub').textContent = 'Você fez ' + m.score + ' pontos (+' + peak + ' XP). Jogue de novo!';
+      $('play').textContent = 'Jogar de novo'; renderMenu();
     }
   };
-  ws.onclose = () => { playing = false; menu.classList.remove('hide'); document.getElementById('sub').textContent = 'Conexão perdida. Clique em Jogar para reconectar.'; ws = null; };
+  ws.onclose = () => { playing = false; ws = null; menu.classList.remove('hide'); $('sub').textContent = 'Conexão perdida. Clique em Jogar para reconectar.'; renderMenu(); };
 }
 function join() {
-  const nick = nickEl.value.trim();
-  try { localStorage.setItem('nick', nick); } catch (e) {}
-  const send = () => ws.send(JSON.stringify({ t: 'join', nick }));
+  const nick = nickEl.value.trim(); sv('nick', nick);
+  const send = () => ws.send(JSON.stringify({ t: 'join', nick, k: skin }));
   menu.classList.add('hide'); lbEl.hidden = false; hud.hidden = false;
   if (ws && ws.readyState === 1) send(); else connect(send);
 }
-document.getElementById('play').onclick = join;
+$('play').onclick = join;
 nickEl.addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
+setInterval(() => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'p', ts: performance.now() })); }, 2000);
 
 function updateUI(m) {
-  document.getElementById('score').textContent = m.sc;
-  document.getElementById('pl').textContent = m.pl + ' jogadores na arena';
+  $('score').textContent = m.sc;
+  const li = lvInfo(); $('hl').textContent = 'Nível ' + level + ' · ' + li.txt; $('hb').style.width = li.pct + '%';
+  $('pl').textContent = m.pl + ' na arena · ping ' + ping + ' ms';
   lbl.innerHTML = '';
   m.lb.forEach(([n, s, id], i) => {
     const li = document.createElement('li'); if (id === myId) li.className = 'me';
@@ -98,6 +185,7 @@ function updateUI(m) {
   });
 }
 
+/* ---------- controles ---------- */
 function sendInput(force) {
   const now = performance.now();
   if (!ws || ws.readyState !== 1 || !playing || angle === null || (!force && now - lastSend < 40)) return;
@@ -121,7 +209,7 @@ cv.addEventListener('touchmove', touch, { passive: true });
 cv.addEventListener('touchend', touch, { passive: true });
 setInterval(() => sendInput(true), 100);
 
-function hsl(h, l) { return 'hsl(' + h + ',80%,' + l + '%)'; }
+/* ---------- desenho ---------- */
 function segsOf(sn, alpha) {
   const p = prev && prev.sn.find(o => o.id === sn.id);
   if (!p || p.s.length !== sn.s.length) return sn.s;
@@ -134,20 +222,18 @@ function draw() {
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
   if (!cur) return;
   const now = performance.now();
-  const alpha = prev ? Math.max(0, Math.min(1, (now - curT) / Math.max(1, curT - prevT))) : 1;
+  const alpha = prev ? Math.max(0, Math.min(1, (now - curT) / TICKMS)) : 1;
   const me = cur.sn.find(s => s.id === myId);
-  if (me) { const sg = segsOf(me, alpha); camX += (sg[0] - camX) * 0.25; camY += (sg[1] - camY) * 0.25; }
+  if (me) { const sg = segsOf(me, alpha); camX += (sg[0] - camX) * 0.3; camY += (sg[1] - camY) * 0.3; }
   const zoom = Math.max(1, Math.min(1.6, 1.6 - (me ? me.s.length / 2 : 10) / 400));
   ctx.save();
   ctx.translate(W / 2, H / 2); ctx.scale(zoom, zoom); ctx.translate(-camX, -camY);
   const vw = W / zoom / 2 + 60, vh = H / zoom / 2 + 60;
-  // grade
   ctx.strokeStyle = '#141a24'; ctx.lineWidth = 2; ctx.beginPath();
   const gs = 80, x0 = Math.floor((camX - vw) / gs) * gs, y0 = Math.floor((camY - vh) / gs) * gs;
   for (let x = x0; x < camX + vw; x += gs) { ctx.moveTo(x, camY - vh); ctx.lineTo(x, camY + vh); }
   for (let y = y0; y < camY + vh; y += gs) { ctx.moveTo(camX - vw, y); ctx.lineTo(camX + vw, y); }
   ctx.stroke();
-  // fora do mapa
   ctx.fillStyle = 'rgba(255,77,94,.10)';
   const L = camX - vw - 50, R = camX + vw + 50, T = camY - vh - 50, B = camY + vh + 50;
   if (L < 0) ctx.fillRect(L, T, -L, B - T);
@@ -155,23 +241,16 @@ function draw() {
   if (T < 0) ctx.fillRect(L, T, R - L, -T);
   if (B > world.h) ctx.fillRect(L, world.h, R - L, B - world.h);
   ctx.strokeStyle = '#ff4d5e'; ctx.lineWidth = 6; ctx.strokeRect(0, 0, world.w, world.h);
-  // comida
-  for (const f of cur.f) {
-    ctx.fillStyle = FOOD_COLORS[f[3]]; ctx.beginPath(); ctx.arc(f[0], f[1], f[2] > 1 ? 9 : 6, 0, 6.283); ctx.fill();
-  }
-  // cobras (as menores primeiro, a minha por cima)
+  for (const f of cur.f) { ctx.fillStyle = FOOD_COLORS[f[3]]; ctx.beginPath(); ctx.arc(f[0], f[1], f[2] > 1 ? 9 : 6, 0, 6.283); ctx.fill(); }
   const list = cur.sn.slice().sort((a, b) => (a.id === myId) - (b.id === myId));
   for (const sn of list) {
-    const sg = segsOf(sn, alpha), n = sg.length / 2, r = 9 + Math.min(8, n / 14);
-    for (let i = n - 1; i >= 0; i--) {
-      ctx.fillStyle = hsl(sn.h, 45 + (i % 6 < 3 ? 6 : 0));
-      ctx.beginPath(); ctx.arc(sg[i * 2], sg[i * 2 + 1], r, 0, 6.283); ctx.fill();
-    }
+    const sg = segsOf(sn, alpha), n = sg.length / 2, r = 9 + Math.min(8, n / 14), col = (SKINS[sn.k] || SKINS[0]).col;
+    for (let i = n - 1; i >= 0; i--) { ctx.fillStyle = col(i, now, sn.h); ctx.beginPath(); ctx.arc(sg[i * 2], sg[i * 2 + 1], r, 0, 6.283); ctx.fill(); }
     const hx = sg[0], hy = sg[1], ha = Math.atan2(hy - sg[3], hx - sg[2]);
     for (const s of [-1, 1]) {
       const ex = hx + Math.cos(ha + s * 0.6) * r * 0.6, ey = hy + Math.sin(ha + s * 0.6) * r * 0.6;
       ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, ey, r * 0.38, 0, 6.283); ctx.fill();
-      ctx.fillStyle = '#1c2b3d'; ctx.beginPath(); ctx.arc(ex + Math.cos(ha) * 2, ey + Math.sin(ha) * 2, r * 0.18, 0, 6.283); ctx.fill();
+      ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(ex + Math.cos(ha) * 2, ey + Math.sin(ha) * 2, r * 0.18, 0, 6.283); ctx.fill();
     }
     ctx.font = '600 15px Fredoka, sans-serif'; ctx.textAlign = 'center';
     ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText(sn.n, hx, hy - r - 10);
