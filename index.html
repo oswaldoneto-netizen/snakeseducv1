@@ -32,6 +32,9 @@ input:focus{border-color:var(--accent)}
 #skins .sk.sel{border-color:var(--accent);background:#141c2e}
 #skins .sk.sel small{color:var(--accent)}
 #skins .sk.lock{opacity:.45;cursor:not-allowed}
+#ctl{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#ctl button{margin:0;width:auto;font:inherit;font-size:15px;font-weight:600;padding:10px;background:#0b0e13;border:2px solid var(--line);border-radius:12px;color:var(--ink);cursor:pointer}
+#ctl button.sel{border-color:var(--accent);background:#141c2e}
 #play{margin-top:16px;width:100%;font:inherit;font-weight:600;font-size:20px;padding:13px;border:0;border-radius:14px;background:var(--accent);color:#fff;cursor:pointer}
 button:focus-visible{outline:3px solid #9bb2ff;outline-offset:2px}
 #play:active{transform:scale(.98)}
@@ -66,8 +69,10 @@ button:focus-visible{outline:3px solid #9bb2ff;outline-offset:2px}
     <input id="nick" maxlength="15" placeholder="Seu nick" autocomplete="off">
     <div class="skh">Skins (suba de nível pra liberar)</div>
     <div id="skins"></div>
+    <div class="skh">Controle</div>
+    <div id="ctl"><button type="button" data-c="kb">Teclado (WASD)</button><button type="button" data-c="mouse">Mouse</button></div>
     <button id="play">Jogar</button>
-    <p id="hint">WASD (ou setas) para guiar, espaço para acelerar.<br>Acelerar gasta pontos. No celular, arraste o dedo (dois dedos aceleram).</p>
+    <p id="hint"></p>
     <p class="by">Criador: Oswaldo</p>
   </div>
 </div>
@@ -94,6 +99,15 @@ const SKINS = [
 const ld = (k, d) => { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } };
 const sv = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 nickEl.value = ld('nick', '');
+let ctl = ld('ctl', 'kb') === 'mouse' ? 'mouse' : 'kb';
+function renderCtl() {
+  document.querySelectorAll('#ctl button').forEach(b => b.classList.toggle('sel', b.dataset.c === ctl));
+  $('hint').textContent = (ctl === 'kb'
+    ? 'WASD (ou setas) para guiar, espaço para acelerar.'
+    : 'Mova o mouse para guiar, clique ou espaço para acelerar.') + ' Acelerar gasta pontos. No celular, arraste o dedo (dois dedos aceleram).';
+}
+document.querySelectorAll('#ctl button').forEach(b => b.onclick = () => { ctl = b.dataset.c; sv('ctl', ctl); renderCtl(); });
+renderCtl();
 let xp = +ld('xp', 0) || 0, skin = +ld('skin', 0) || 0;
 const lvOf = x => Math.floor(Math.sqrt(x / 50)) + 1;
 const xpAt = l => 50 * (l - 1) * (l - 1);
@@ -140,7 +154,7 @@ function checkLevel() {
 /* ---------- rede ---------- */
 let ws, myId = null, world = { w: 4000, h: 4000 }, playing = false;
 let prev = null, cur = null, curT = 0, camX = 2000, camY = 2000;
-let angle = null, boost = false, lastSend = 0, runBase = 0, peak = 0, lastUI = 0, ping = 0;
+let angle = null, boost = false, lastSend = 0, runBase = 0, peak = 0, lastUI = 0, pingS = 0;
 const TICKMS = 33;
 const FOOD_COLORS = ['#ff5d73', '#ffb020', '#2ec4b6', '#7b61ff', '#ff7ab6', '#3ddc84', '#4cc9f0', '#f77f00'];
 
@@ -149,7 +163,7 @@ function connect(cb) {
   ws.onopen = cb;
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
-    if (m.t === 'p') { ping = Math.round(performance.now() - m.ts); }
+    if (m.t === 'p') { const r = performance.now() - m.ts; pingS = pingS ? pingS * 0.7 + r * 0.3 : r; }
     else if (m.t === 'init') { myId = m.id; world = { w: m.w, h: m.h }; playing = true; prev = cur = null; angle = null; boost = false; runBase = xp; peak = 0; }
     else if (m.t === 's') {
       prev = cur; cur = m; curT = performance.now();
@@ -171,12 +185,12 @@ function join() {
 }
 $('play').onclick = join;
 nickEl.addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
-setInterval(() => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'p', ts: performance.now() })); }, 2000);
+setInterval(() => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'p', ts: performance.now() })); }, 1000);
 
 function updateUI(m) {
   $('score').textContent = m.sc;
   const li = lvInfo(); $('hl').textContent = 'Nível ' + level + ' · ' + li.txt; $('hb').style.width = li.pct + '%';
-  $('pl').textContent = m.pl + ' na arena · ping ' + ping + ' ms';
+  $('pl').textContent = m.pl + ' na arena · ping ' + Math.round(pingS) + ' ms';
   lbl.innerHTML = '';
   m.lb.forEach(([n, s, id], i) => {
     const li = document.createElement('li'); if (id === myId) li.className = 'me';
@@ -192,18 +206,27 @@ function sendInput(force) {
   if (!ws || ws.readyState !== 1 || !playing || angle === null || (!force && now - lastSend < 40)) return;
   lastSend = now; ws.send(JSON.stringify({ t: 'a', a: angle, b: boost }));
 }
-const held = new Set();
+const held = new Set(); let mouseDown = false;
 const KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'];
 function steer() {
-  const dx = (held.has('KeyD') || held.has('ArrowRight') ? 1 : 0) - (held.has('KeyA') || held.has('ArrowLeft') ? 1 : 0);
-  const dy = (held.has('KeyS') || held.has('ArrowDown') ? 1 : 0) - (held.has('KeyW') || held.has('ArrowUp') ? 1 : 0);
-  if (dx || dy) angle = Math.atan2(dy, dx);
-  boost = held.has('Space');
+  if (ctl === 'kb') {
+    const dx = (held.has('KeyD') || held.has('ArrowRight') ? 1 : 0) - (held.has('KeyA') || held.has('ArrowLeft') ? 1 : 0);
+    const dy = (held.has('KeyS') || held.has('ArrowDown') ? 1 : 0) - (held.has('KeyW') || held.has('ArrowUp') ? 1 : 0);
+    if (dx || dy) angle = Math.atan2(dy, dx);
+  }
+  boost = held.has('Space') || mouseDown;
   sendInput(true);
 }
-addEventListener('keydown', e => { if (document.activeElement === nickEl || !KEYS.includes(e.code)) return; held.add(e.code); steer(); e.preventDefault(); });
+addEventListener('keydown', e => {
+  if (!playing || document.activeElement === nickEl || !KEYS.includes(e.code)) return;
+  if (ctl === 'mouse' && e.code !== 'Space') return;
+  held.add(e.code); steer(); e.preventDefault();
+});
 addEventListener('keyup', e => { if (held.delete(e.code)) steer(); });
-addEventListener('blur', () => { held.clear(); boost = false; });
+addEventListener('blur', () => { held.clear(); mouseDown = false; boost = false; });
+addEventListener('mousemove', e => { if (ctl !== 'mouse' || !playing) return; angle = Math.atan2(e.clientY - H / 2, e.clientX - W / 2); sendInput(); });
+cv.addEventListener('mousedown', () => { if (ctl !== 'mouse') return; mouseDown = true; steer(); });
+addEventListener('mouseup', () => { if (mouseDown) { mouseDown = false; steer(); } });
 function touch(e) { const t = e.touches[0]; if (!t) { boost = false; return; } angle = Math.atan2(t.clientY - H / 2, t.clientX - W / 2); boost = e.touches.length > 1; sendInput(true); }
 cv.addEventListener('touchstart', touch, { passive: true });
 cv.addEventListener('touchmove', touch, { passive: true });
@@ -211,6 +234,29 @@ cv.addEventListener('touchend', touch, { passive: true });
 setInterval(() => sendInput(true), 100);
 
 /* ---------- desenho ---------- */
+/* predição: a minha cobra é avançada localmente pelo tempo de ida da rede, então o giro aparece na hora */
+const SEG = 10, SPEED = 3, BOOST = 5.2, TURN = 0.2;
+function simStep(s, a, ta, fast, k) {
+  let d = ta - a; d = Math.atan2(Math.sin(d), Math.cos(d));
+  a += Math.max(-TURN * k, Math.min(TURN * k, d));
+  const sp = (fast ? BOOST : SPEED) * k;
+  s[0] += Math.cos(a) * sp; s[1] += Math.sin(a) * sp;
+  for (let i = 2; i < s.length; i += 2) {
+    const dx = s[i - 2] - s[i], dy = s[i - 1] - s[i + 1], dist = Math.hypot(dx, dy);
+    if (dist > SEG) { s[i] += dx / dist * (dist - SEG); s[i + 1] += dy / dist * (dist - SEG); }
+  }
+  return a;
+}
+function predictOwn(me) {
+  const s = Float64Array.from(me.s);
+  let a = me.a !== undefined ? me.a : Math.atan2(s[1] - s[3], s[0] - s[2]);
+  const total = Math.min(10, (pingS / 2 + (performance.now() - curT)) / TICKMS);
+  const ta = angle === null ? a : angle, fast = boost && cur.sc > 5;
+  const n = Math.floor(total);
+  for (let i = 0; i < n; i++) a = simStep(s, a, ta, fast, 1);
+  if (total > n) simStep(s, a, ta, fast, total - n);
+  return s;
+}
 function segsOf(sn, alpha) {
   const p = prev && prev.sn.find(o => o.id === sn.id);
   if (!p || p.s.length !== sn.s.length) return sn.s;
@@ -225,7 +271,8 @@ function draw() {
   const now = performance.now();
   const alpha = prev ? Math.max(0, Math.min(1, (now - curT) / TICKMS)) : 1;
   const me = cur.sn.find(s => s.id === myId);
-  if (me) { const sg = segsOf(me, alpha); camX += (sg[0] - camX) * 0.3; camY += (sg[1] - camY) * 0.3; }
+  const mine = me ? predictOwn(me) : null;
+  if (mine) { camX += (mine[0] - camX) * 0.45; camY += (mine[1] - camY) * 0.45; }
   const zoom = Math.max(1, Math.min(1.6, 1.6 - (me ? me.s.length / 2 : 10) / 400));
   ctx.save();
   ctx.translate(W / 2, H / 2); ctx.scale(zoom, zoom); ctx.translate(-camX, -camY);
@@ -245,7 +292,7 @@ function draw() {
   for (const f of cur.f) { ctx.fillStyle = FOOD_COLORS[f[3]]; ctx.beginPath(); ctx.arc(f[0], f[1], f[2] > 1 ? 9 : 6, 0, 6.283); ctx.fill(); }
   const list = cur.sn.slice().sort((a, b) => (a.id === myId) - (b.id === myId));
   for (const sn of list) {
-    const sg = segsOf(sn, alpha), n = sg.length / 2, r = 9 + Math.min(8, n / 14), col = (SKINS[sn.k] || SKINS[0]).col;
+    const sg = (sn === me && mine) ? mine : segsOf(sn, alpha), n = sg.length / 2, r = 9 + Math.min(8, n / 14), col = (SKINS[sn.k] || SKINS[0]).col;
     for (let i = n - 1; i >= 0; i--) { ctx.fillStyle = col(i, now, sn.h); ctx.beginPath(); ctx.arc(sg[i * 2], sg[i * 2 + 1], r, 0, 6.283); ctx.fill(); }
     const hx = sg[0], hy = sg[1], ha = Math.atan2(hy - sg[3], hx - sg[2]);
     for (const s of [-1, 1]) {

@@ -137,7 +137,7 @@ function tick() {
       if (Math.abs(oh.x - h.x) > VIEW + o.seg.length * SEG || Math.abs(oh.y - h.y) > VIEW + o.seg.length * SEG) continue;
       const pts = [];
       for (const p of o.seg) pts.push(Math.round(p.x), Math.round(p.y));
-      sn.push({ id: o.id, n: o.nick, h: o.hue, k: o.k, sc: o.score, s: pts });
+      sn.push({ id: o.id, n: o.nick, h: o.hue, k: o.k, a: +o.a.toFixed(3), sc: o.score, s: pts });
     }
     const f = [];
     for (const p of food) if (Math.abs(p.x - h.x) < VIEW && Math.abs(p.y - h.y) < VIEW) f.push([Math.round(p.x), Math.round(p.y), p.v, p.c]);
